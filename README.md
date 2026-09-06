@@ -129,3 +129,24 @@ Before public launch, validate actual Supabase email delivery/session refresh an
 - [Supabase row-level security](https://supabase.com/docs/guides/database/postgres/row-level-security)
 
 See `TASKS.md` for implementation and validation status, and `ARCHITECTURE.md` for boundaries and scoring.
+
+## Phase 2 local staging
+
+Run `pnpm dev:staging` from this checkout with an existing `OPENAI_API_KEY` in ignored `.env.local`. The launcher sets `LOCAL_STAGING_MODE=true`, forces `DEMO_MODE=false`, and binds only to `127.0.0.1`. Open `http://127.0.0.1:3000` (or `http://localhost:3000`). The banner reads **Local staging — real OpenAI, local data**.
+
+This mode accepts arbitrary Paste, CSV and TXT reviews and uses the real `OpenAIProvider`. It bypasses Supabase authentication, database persistence and database quotas only for validated local requests. Projects and resumable progress live under ignored `.local/staging/`, separate from the synthetic demo's `.local/*.json`. Local staging is for one developer process, not a shared service. URL imports still require an authenticated account. Real analyses incur OpenAI usage charges.
+
+`LOCAL_STAGING_MODE` defaults to false. Production startup/build rejects it when true. Local requests must have an exact `localhost` or `127.0.0.1` Host, matching port and same origin; external or ambiguous proxy headers are rejected. Never expose or tunnel the local server. Production authentication, RLS, persistence and quotas remain required. Set both `LOCAL_STAGING_MODE=false` and `DEMO_MODE=false` for production.
+
+For automated validation in PowerShell (stop other port 3000 servers first):
+
+```powershell
+$env:PLAYWRIGHT_START_SERVER='true'
+pnpm test:e2e  # synthetic regression suite; no paid calls
+$env:LOCAL_STAGING_E2E='true'
+pnpm test:e2e  # opt-in paid English + Egyptian Arabic analyses, evidence checks and TXT import
+```
+
+The live suite persists summaries under `.local/validation/` and checks review/theme IDs, exact source quotes, counts, language, browser evidence and project history. Unset `LOCAL_STAGING_E2E` to return to the default synthetic suite. Run `node scripts/check-secrets.mjs` to compare local credential values against source, diffs, logs, local data and build/test artifacts (including ZIP traces), without printing values. Only the original `.env.local` is excluded; dependencies and Git object storage are outside this artifact scan.
+
+Turbopack's filesystem caches are disabled because they can retain server environment values. Deployment tracing and Docker exclude env files and local data. If upgrading an older checkout that already has disk caches, remove `.next/cache/turbopack` and `.next/dev/cache/turbopack` before running the audit. Never commit or share local env files, data or cache directories.

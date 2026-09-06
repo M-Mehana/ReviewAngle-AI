@@ -1,7 +1,13 @@
 import "server-only";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { NextRequest } from "next/server";
-export type Context = { userId: string; demo: boolean; db?: SupabaseClient };
+import { localStagingAllowed } from "./local-staging";
+export type Context = {
+  userId: string;
+  demo: boolean;
+  localStaging?: boolean;
+  db?: SupabaseClient;
+};
 export class AppError extends Error {
   constructor(
     message: string,
@@ -19,6 +25,32 @@ export function configured() {
   );
 }
 export async function context(req: NextRequest): Promise<Context> {
+  if (process.env.LOCAL_STAGING_MODE === "true") {
+    let allowed = false;
+    try {
+      allowed = localStagingAllowed(req.headers, req.nextUrl);
+    } catch {
+      throw new AppError(
+        "Local staging requires non-production mode and DEMO_MODE=false.",
+        503,
+      );
+    }
+    if (!allowed)
+      throw new AppError(
+        "Local staging requires a direct same-origin localhost or 127.0.0.1 request.",
+        403,
+      );
+    if (!process.env.OPENAI_API_KEY)
+      throw new AppError(
+        "Local staging requires OPENAI_API_KEY in the server environment.",
+        503,
+      );
+    return {
+      userId: "00000000-0000-4000-8000-000000000002",
+      demo: false,
+      localStaging: true,
+    };
+  }
   if (req.method !== "GET") {
     const origin = req.headers.get("origin");
     const localOrigins =

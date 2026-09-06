@@ -16,18 +16,27 @@ import {
   Sparkles,
   X,
 } from "lucide-react";
-import { api, copy, download, supabase } from "@/lib/client";
+import { api, copy, download, getSupabase } from "@/lib/client";
 import { anglesText, csvExport, jsonExport } from "@/lib/exports";
 import type { Project, Stage } from "@/lib/analysis/schema";
 import { Importer } from "./importer";
 import { Results, sectionNames, sections, type Section } from "./results";
 import { Empty, Modal, Spinner } from "./ui";
 import { localizeError } from "@/lib/language";
-export function Workspace({ demo, ready }: { demo: boolean; ready: boolean }) {
+export function Workspace({
+  demo,
+  ready,
+  localStaging = false,
+}: {
+  demo: boolean;
+  ready: boolean;
+  localStaging?: boolean;
+}) {
+  const supabase = localStaging ? null : getSupabase();
   const [ar, setAr] = useState(false);
   const t = (en: string, arabic: string) => (ar ? arabic : en);
-  const [signed, setSigned] = useState(demo);
-  const [authReady, setAuthReady] = useState(demo || !ready);
+  const [signed, setSigned] = useState(demo || localStaging);
+  const [authReady, setAuthReady] = useState(demo || localStaging || !ready);
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
   const [sent, setSent] = useState(false);
@@ -64,10 +73,10 @@ export function Workspace({ demo, ready }: { demo: boolean; ready: boolean }) {
       setAuthReady(true);
     });
     return () => data.subscription.unsubscribe();
-  }, [demo]);
+  }, [demo, localStaging, supabase]);
   useEffect(() => {
     if (!signed) return;
-    api<{ projects: Project[] }>("/api/projects")
+    api<{ projects: Project[] }>("/api/projects", undefined, localStaging)
       .then((r) => setProjects(r.projects))
       .catch((e) => setError(e.message));
   }, [signed]);
@@ -91,6 +100,7 @@ export function Workspace({ demo, ready }: { demo: boolean; ready: boolean }) {
         const result = await api<{ project: Project }>(
           `/api/projects/${current.id}/step`,
           {},
+          localStaging,
         );
         current = result.project;
         update(current);
@@ -260,7 +270,7 @@ export function Workspace({ demo, ready }: { demo: boolean; ready: boolean }) {
             <CircleHelp size={17} />
             {t("How it works", "كيف يعمل")}
           </button>
-          {signed && !demo && (
+          {signed && !demo && !localStaging && (
             <button
               className="nav-item"
               onClick={async () => {
@@ -302,6 +312,11 @@ export function Workspace({ demo, ready }: { demo: boolean; ready: boolean }) {
           </div>
         </header>
         <main>
+          {localStaging && (
+            <div className="demo-banner" role="status">
+              Local staging — real OpenAI, local data
+            </div>
+          )}
           <div className="page-heading">
             <div>
               <span className="eyebrow">
@@ -504,6 +519,7 @@ export function Workspace({ demo, ready }: { demo: boolean; ready: boolean }) {
             <>
               {view === "new" && (
                 <Importer
+                  localStaging={localStaging}
                   ar={ar}
                   demo={demo}
                   onError={setError}
@@ -574,6 +590,7 @@ export function Workspace({ demo, ready }: { demo: boolean; ready: boolean }) {
                 project &&
                 (project.run.stage === "complete" ? (
                   <Results
+                    localStaging={localStaging}
                     key={project.id}
                     project={project}
                     section={section}

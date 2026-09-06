@@ -7,6 +7,10 @@ export const runtime = "nodejs";
 export async function POST(req: NextRequest) {
   try {
     const c = await context(req);
+    if (c.localStaging)
+      throw new AppError(
+        "Use Paste, CSV or TXT in local staging. URL imports require an authenticated account.",
+      );
     if (c.demo)
       throw new AppError(
         "Public URL imports require a configured account. Try the synthetic examples or paste/CSV preview.",

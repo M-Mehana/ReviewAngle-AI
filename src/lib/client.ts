@@ -1,14 +1,22 @@
 "use client";
 import { createClient } from "@supabase/supabase-js";
-export const supabase =
-  process.env.NEXT_PUBLIC_SUPABASE_URL &&
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-    ? createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-      )
-    : null;
-export async function api<T>(url: string, body?: unknown): Promise<T> {
+let cached: ReturnType<typeof createClient> | null | undefined;
+export function getSupabase() {
+  return (cached ??=
+    process.env.NEXT_PUBLIC_SUPABASE_URL &&
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+      ? createClient(
+          process.env.NEXT_PUBLIC_SUPABASE_URL,
+          process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+        )
+      : null);
+}
+export async function api<T>(
+  url: string,
+  body?: unknown,
+  skipAuth = false,
+): Promise<T> {
+  const supabase = skipAuth ? null : getSupabase();
   const token = supabase
     ? (await supabase.auth.getSession()).data.session?.access_token
     : undefined;

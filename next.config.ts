@@ -1,6 +1,21 @@
 import type { NextConfig } from "next";
+if (
+  process.env.LOCAL_STAGING_MODE === "true" &&
+  process.env.NODE_ENV === "production"
+) {
+  throw new Error(
+    "Local staging cannot run in production. Set LOCAL_STAGING_MODE=false.",
+  );
+}
 const config: NextConfig = {
+  // Turbopack persists environment values in its disk cache. Keep secrets
+  // exclusively in the ignored env file and process memory.
+  experimental: {
+    turbopackFileSystemCacheForDev: false,
+    turbopackFileSystemCacheForBuild: false,
+  },
   output: "standalone",
+  outputFileTracingExcludes: { "/*": ["./.env*", "./.local/**/*"] },
   devIndicators: false,
   async headers() {
     return [

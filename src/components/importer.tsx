@@ -31,11 +31,13 @@ export function Importer({
   onCreated,
   onError,
   demo,
+  localStaging = false,
 }: {
   ar: boolean;
   onCreated: (p: Project) => void;
   onError: (s: string) => void;
   demo: boolean;
+  localStaging?: boolean;
 }) {
   const t = (en: string, arabic: string) => (ar ? arabic : en);
   const [name, setName] = useState("");
@@ -130,6 +132,7 @@ export function Importer({
       const result = await api<{ reviews: RawReview[]; truncated: boolean }>(
         "/api/import-url",
         { url },
+        localStaging,
       );
       setRows(result.reviews);
       setTable(null);
@@ -150,12 +153,16 @@ export function Importer({
   async function analyze() {
     setBusy(true);
     try {
-      const { project } = await api<{ project: Project }>("/api/projects", {
-        name: name.trim() || t("Untitled analysis", "تحليل جديد"),
-        language,
-        reviews: rows,
-        excludeNearDuplicates: exclude,
-      });
+      const { project } = await api<{ project: Project }>(
+        "/api/projects",
+        {
+          name: name.trim() || t("Untitled analysis", "تحليل جديد"),
+          language,
+          reviews: rows,
+          excludeNearDuplicates: exclude,
+        },
+        localStaging,
+      );
       onCreated(project);
     } catch (e) {
       onError((e as Error).message);

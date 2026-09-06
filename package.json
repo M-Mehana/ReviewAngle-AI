@@ -4,6 +4,7 @@
   "private": true,
   "packageManager": "pnpm@11.19.0",
   "scripts": {
+    "dev:staging": "node scripts/local-staging.mjs",
     "dev": "next dev --hostname 127.0.0.1",
     "build": "next build",
     "start": "next start --hostname 0.0.0.0",

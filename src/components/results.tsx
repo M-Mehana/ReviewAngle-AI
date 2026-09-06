@@ -47,7 +47,9 @@ export function Results({
   onUpdate,
   onError,
   onNotice,
+  localStaging = false,
 }: {
+  localStaging?: boolean;
   project: Project;
   section: Section;
   ar: boolean;
@@ -87,6 +89,7 @@ export function Results({
       const res = await api<{ project?: Project; translation?: string }>(
         `/api/projects/${p.id}`,
         { action, angleId, reviewId },
+        localStaging,
       );
       if (res.project) {
         onUpdate(res.project);

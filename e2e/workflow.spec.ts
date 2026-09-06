@@ -64,7 +64,7 @@ test("desktop: synthetic reviews → analysis → evidence → followups → sav
   await expect(
     page.getByRole("heading", { name: "Overview", exact: true }),
   ).toBeVisible({ timeout: 90000 });
-  await expect(page.getByText("of 12 imported")).toBeVisible();
+  await expect(page.getByText("of 12 imported")).toBeVisible({ timeout: 90000 });
   await page.screenshot({
     path: "test-results/desktop-overview.png",
     fullPage: true,

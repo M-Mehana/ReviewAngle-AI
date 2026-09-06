@@ -4,15 +4,17 @@ import path from "node:path";
 import type { Context } from "./context";
 import { AppError, limit } from "./context";
 import type { Project } from "../analysis/schema";
-const folder = path.join(process.cwd(), ".local");
-const file = (id: string) => path.join(folder, `${id}.json`);
+const directory = (c: Context) =>
+  path.join(process.cwd(), ".local", ...(c.localStaging ? ["staging"] : []));
+const file = (c: Context, id: string) => path.join(directory(c), `${id}.json`);
 const validId = (id: string) => {
   if (!/^[0-9a-f-]{36}$/i.test(id))
     throw new AppError("Project not found.", 404);
 };
 export async function listProjects(c: Context): Promise<Project[]> {
-  if (c.demo) {
+  if (c.demo || c.localStaging) {
     const { readdir } = await import("node:fs/promises");
+    const folder = directory(c);
     await mkdir(folder, { recursive: true });
     const names = (await readdir(folder)).filter((n) => n.endsWith(".json"));
     return (
@@ -40,9 +42,9 @@ export async function listProjects(c: Context): Promise<Project[]> {
 }
 export async function getProject(c: Context, id: string): Promise<Project> {
   validId(id);
-  if (c.demo) {
+  if (c.demo || c.localStaging) {
     try {
-      return JSON.parse(await readFile(file(id), "utf8"));
+      return JSON.parse(await readFile(file(c, id), "utf8"));
     } catch (e) {
       if ((e as NodeJS.ErrnoException).code === "ENOENT")
         throw new AppError("Project not found.", 404);
@@ -60,11 +62,12 @@ export async function getProject(c: Context, id: string): Promise<Project> {
 }
 export async function saveProject(c: Context, p: Project) {
   validId(p.id);
-  if (c.demo) {
+  if (c.demo || c.localStaging) {
+    const folder = directory(c);
     await mkdir(folder, { recursive: true });
-    const tmp = `${file(p.id)}.${crypto.randomUUID()}.tmp`;
+    const tmp = `${file(c, p.id)}.${crypto.randomUUID()}.tmp`;
     await writeFile(tmp, JSON.stringify(p), "utf8");
-    await rename(tmp, file(p.id));
+    await rename(tmp, file(c, p.id));
     return;
   }
   const { error } = await c.db!.rpc("save_project_snapshot", {
@@ -95,7 +98,7 @@ export async function locked<T>(
     );
   locks.add(key);
   try {
-    if (!c.demo) {
+    if (!c.demo && !c.localStaging) {
       const { data, error } = await c.db!.rpc("claim_project", {
         owner_id: c.userId,
         project_key: id,
@@ -115,7 +118,7 @@ export async function locked<T>(
     return await action();
   } finally {
     locks.delete(key);
-    if (!c.demo) {
+    if (!c.demo && !c.localStaging) {
       const { error } = await c.db!.rpc("release_project", {
         owner_id: c.userId,
         project_key: id,
@@ -135,7 +138,7 @@ export async function reserve(
   kind: "reviews" | "followup" | "url",
   amount: number,
 ) {
-  if (c.demo) return;
+  if (c.demo || c.localStaging) return;
   const allowance =
     kind === "reviews"
       ? limit("FREE_REVIEW_LIMIT", 500)
