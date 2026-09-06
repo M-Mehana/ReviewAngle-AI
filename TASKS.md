@@ -28,6 +28,13 @@
 - Four browser workflows passed: desktop analysis, evidence, translation setup recovery, hooks, UGC follow-ups, saving, JSON export and persisted history; Arabic mobile layout at 390px; malformed CSV and missing column recovery; direct paste and CSV analysis with actual clipboard verification.
 - Fixed localhost origin mismatch exposed by the browser test, in-dialog error visibility, and scroll reset between sections.
 - Original fixture examples are labeled synthetic throughout. Demo analysis is deterministic and never presented as live OpenAI output.
+- Standalone production server smoke test passed: root returned 200; demo stayed disabled even with DEMO_MODE=true; the unconfigured production API returned the intended 503 instead of granting demo access.
+
+## Repository delivery
+
+- Source is committed on local `main`; source ZIP and a complete Git bundle were created for delivery.
+- Remote upload could not complete: local Git has no credentials, and the authenticated GitHub plugin returned HTTP 403, `Resource not accessible by integration`, for a file write. The remote repository remains unchanged.
+- After GitHub Contents write access or local Git authentication is configured, publish with `git push -u origin main` from this checkout. No force push is needed while the remote remains empty.
 
 ## External validation still required before launch
 
