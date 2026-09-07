@@ -6,10 +6,27 @@ import path from "node:path";
 
 // Compare in memory; never print secret values, matching lines, or file contents.
 const env = parseEnv(await readFile(".env.local", "utf8"));
+function isPublicSupabaseKey(value) {
+  if (value.startsWith("sb_publishable_")) return true;
+  try {
+    return (
+      JSON.parse(Buffer.from(value.split(".")[1], "base64url").toString())
+        .role === "anon"
+    );
+  } catch {
+    return false;
+  }
+}
 const secrets = Object.entries(env)
   .filter(
     ([name, value]) =>
-      /KEY|TOKEN|SECRET|PASSWORD/.test(name) && value.length >= 16,
+      // The anon/publishable browser key is intentionally public. Do not
+      // exempt arbitrary NEXT_PUBLIC_* names: a misplaced server key is a leak.
+      !(
+        name === "NEXT_PUBLIC_SUPABASE_ANON_KEY" && isPublicSupabaseKey(value)
+      ) &&
+      /KEY|TOKEN|SECRET|PASSWORD/.test(name) &&
+      value.length >= 16,
   )
   .map(([, value]) => Buffer.from(value));
 if (!secrets.length)

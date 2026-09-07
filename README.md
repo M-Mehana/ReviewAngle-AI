@@ -150,3 +150,15 @@ pnpm test:e2e  # opt-in paid English + Egyptian Arabic analyses, evidence checks
 The live suite persists summaries under `.local/validation/` and checks review/theme IDs, exact source quotes, counts, language, browser evidence and project history. Unset `LOCAL_STAGING_E2E` to return to the default synthetic suite. Run `node scripts/check-secrets.mjs` to compare local credential values against source, diffs, logs, local data and build/test artifacts (including ZIP traces), without printing values. Only the original `.env.local` is excluded; dependencies and Git object storage are outside this artifact scan.
 
 Turbopack's filesystem caches are disabled because they can retain server environment values. Deployment tracing and Docker exclude env files and local data. If upgrading an older checkout that already has disk caches, remove `.next/cache/turbopack` and `.next/dev/cache/turbopack` before running the audit. Never commit or share local env files, data or cache directories.
+
+## Real Supabase integration validation
+
+Use the existing staging project only. With its public URL/anon key and `SUPABASE_SERVICE_ROLE_KEY` configured directly in ignored `.env.local`, run `pnpm test:supabase`. The runner forces `DEMO_MODE=false` and `LOCAL_STAGING_MODE=false`, creates two temporary confirmed Auth users, validates password login/renewal and authenticated app persistence, and deletes those test users/data afterward. It makes a small paid OpenAI analysis plus a hooks request. It refuses missing credentials and never treats a skipped/blocked run as success. Traces, screenshots and video are disabled to keep bearer tokens out of artifacts.
+
+This automated test does **not** claim to verify public signup confirmation or actual email delivery: confirmed test accounts are created with the admin API. Validate those separately with an authorized test mailbox. The existing product UI uses email OTP; no password UI has been added.
+
+`scripts/validate-supabase-database.sql` independently checks the existing hosted schema's service-role writes, all 11 ownership policies, relational persistence, quota and lease RPCs using rollback-only test data. It changes no schema and is not a migration.
+
+Run `node scripts/prepare-validation-data.mjs` to create a blank genuine-review CSV template and an explicitly NON-CUSTOMER 200-row load fixture under ignored `.local/validation-datasets/`. Use genuine, authorized product reviews for semantic marketing-quality evaluation; the generated data measures ingestion/batching/evidence handling only. The 50/200-row tests use 16/56 deterministic provider-double calls, with zero paid requests. To record their local timing summaries, set `WRITE_VALIDATION_REPORT=true` before `pnpm test`.
+
+Run the secret audit after build/test servers stop so generated files do not change during scanning. The public Supabase anon/publishable key is intentionally allowed in browser output; a server-role key placed in that public slot is still flagged. Keep private credentials solely in `.env.local`.
