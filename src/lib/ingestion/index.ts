@@ -47,12 +47,72 @@ function fingerprint(text: string) {
     .replace(/[\p{P}\p{S}\s]/gu, "");
 }
 function similarity(a: string, b: string) {
-  const tokens = (v: string) => new Set(v.toLowerCase().split(/\s+/));
-  const x = tokens(a),
-    y = tokens(b);
+  // Comparison-only folding: evidence text and exact-duplicate rules stay intact.
+  const fold = (v: string) =>
+    v
+      .toLowerCase()
+      .replace(/[أإآ]/g, "ا")
+      .replace(/([\u0621-\u064A])\1+/g, "$1")
+      .replace(/[^\p{L}\p{N}']+/gu, " ")
+      .trim();
+  const left = fold(a),
+    right = fold(b);
+  const tokens = (v: string) => new Set(v.split(/\s+/));
+  const x = tokens(left),
+    y = tokens(right);
   if (Math.min(x.size, y.size) < 6) return 0;
+  // A small edit can reverse a review; don't suppress changed negation.
+  const negations = [
+    "مش",
+    "لا",
+    "لم",
+    "لن",
+    "بدون",
+    "ما",
+    "not",
+    "no",
+    "never",
+    "don't",
+    "doesn't",
+    "isn't",
+    "wasn't",
+    "can't",
+  ];
+  if (negations.some((word) => x.has(word) !== y.has(word))) return 0;
   const intersection = [...x].filter((v) => y.has(v)).length;
-  return intersection / (x.size + y.size - intersection);
+  const overlap = intersection / (x.size + y.size - intersection);
+  if (overlap >= 0.88) return overlap;
+  // Long Arabic copies often differ in joined words or a few spelling edits.
+  // Use a bounded character comparison only for these, never short praise.
+  const compactA = left.replace(/ /g, ""),
+    compactB = right.replace(/ /g, "");
+  if (
+    !/[\u0621-\u064A]/.test(a) ||
+    !/[\u0621-\u064A]/.test(b) ||
+    Math.min(compactA.length, compactB.length) < 80
+  )
+    return overlap;
+  const maxLength = Math.max(compactA.length, compactB.length);
+  const allowance = Math.floor(maxLength * 0.08);
+  if (Math.abs(compactA.length - compactB.length) > allowance) return overlap;
+  let previous = Array.from({ length: compactB.length + 1 }, (_, i) => i);
+  for (let i = 1; i <= compactA.length; i++) {
+    const current = [i];
+    let minimum = i;
+    for (let j = 1; j <= compactB.length; j++) {
+      current[j] = Math.min(
+        current[j - 1] + 1,
+        previous[j] + 1,
+        previous[j - 1] + Number(compactA[i - 1] !== compactB[j - 1]),
+      );
+      minimum = Math.min(minimum, current[j]);
+    }
+    if (minimum > allowance) return overlap;
+    previous = current;
+  }
+  return previous[compactB.length] <= allowance
+    ? 1 - previous[compactB.length] / maxLength
+    : overlap;
 }
 export function prepareReviews(rows: RawReview[], existing: Review[] = []) {
   const reviews: Review[] = [],

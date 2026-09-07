@@ -98,16 +98,34 @@ export class OpenAIProvider implements ModelProvider {
     );
   }
   intelligence(themes: Theme[], language: OutputLanguage) {
+    const schema = themes.length
+      ? IntelligenceSchema.extend({
+          insights: z.array(
+            IntelligenceSchema.shape.insights.element.extend({
+              themeIds: z.array(z.enum(themes.map((t) => t.id))).min(1),
+            }),
+          ),
+        })
+      : IntelligenceSchema;
     return this.ask(
-      IntelligenceSchema,
+      schema,
       "marketing_intelligence",
       `Generate concise actionable intelligence in all relevant categories, with themeIds supporting each assertion. Omit unsupported categories. Distinguish persona hypotheses from observed facts. Counts are computed separately. ${localizationPrompt(language)}`,
       themes,
     );
   }
   angles(themes: Theme[], language: OutputLanguage) {
+    const schema = themes.length
+      ? AnglesSchema.extend({
+          angles: z.array(
+            AnglesSchema.shape.angles.element.extend({
+              themeIds: z.array(z.enum(themes.map((t) => t.id))).min(1),
+            }),
+          ),
+        })
+      : AnglesSchema;
     return this.ask(
-      AnglesSchema,
+      schema,
       "ad_angles",
       `Generate about 10 distinct useful advertising angles, fewer if evidence is sparse. Use themeIds with direct evidence for the central claim. Avoid bundling unrelated claims. Provide varied hooks, short ad copy, a UGC concept, a first-three-seconds scene and CTA. Never claim a creator personally used the product. Localize persuasion naturally for the requested audience. ${localizationPrompt(language)}`,
       themes,

@@ -7,6 +7,7 @@ vi.mock("openai", () => ({
 }));
 import { OpenAIProvider } from "../src/lib/analysis/provider";
 import { prepareReviews } from "../src/lib/ingestion";
+import type { Theme } from "../src/lib/analysis/schema";
 beforeEach(() => mock.parse.mockReset());
 it("uses Responses structured outputs with storage disabled and only masked review data", async () => {
   const reviews = prepareReviews([
@@ -40,3 +41,61 @@ it("schema-validates even a malformed mocked provider result", async () => {
   });
   await expect(new OpenAIProvider().extract([])).rejects.toThrow();
 });
+
+it.each(["intelligence", "angles"] as const)(
+  "%s constrains generated references to supplied evidence before requesting model output",
+  async (method) => {
+    const themes: Theme[] = [
+      {
+        id: "theme-available",
+        label: "Quiet operation",
+        category: "benefit",
+        scope: "product",
+        reviewIds: ["review-1"],
+        count: 1,
+        quotes: [{ reviewId: "review-1", quote: "Quiet operation" }],
+      },
+    ];
+    const insight = {
+      category: "benefit",
+      title: "Quiet",
+      description: "Quiet operation",
+      themeIds: ["theme-typo"],
+    };
+    const angle = {
+      name: "Quiet",
+      type: "benefit",
+      persona: "Hypothesis",
+      insight: "Quiet operation",
+      themeIds: ["theme-typo"],
+      hook: "Quiet operation",
+      alternativeHooks: [],
+      copy: "Quiet operation",
+      ugc: "Show the product",
+      firstThreeSeconds: "Product shot",
+      cta: "View details",
+    };
+    mock.parse.mockResolvedValue({
+      output_parsed:
+        method === "intelligence"
+          ? { insights: [insight] }
+          : { angles: [angle] },
+    });
+    await expect(new OpenAIProvider()[method](themes, "en")).rejects.toThrow();
+    const schema = mock.parse.mock.calls[0][0].text.format.schema;
+    const collection = method === "intelligence" ? "insights" : "angles";
+    const reference = schema.properties[collection].items.properties.themeIds;
+    expect(reference.minItems).toBe(1);
+    expect(reference.items.enum ?? [reference.items.const]).toEqual([
+      "theme-available",
+    ]);
+    const valid =
+      method === "intelligence"
+        ? { insights: [{ ...insight, themeIds: ["theme-available"] }] }
+        : { angles: [{ ...angle, themeIds: ["theme-available"] }] };
+    mock.parse.mockResolvedValue({ output_parsed: valid });
+    await expect(new OpenAIProvider()[method](themes, "en")).resolves.toEqual(
+      valid,
+    );
+  },
+);
