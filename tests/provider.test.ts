@@ -48,32 +48,32 @@ it.each(["intelligence", "angles"] as const)(
     const themes: Theme[] = [
       {
         id: "theme-available",
-        label: "Quiet operation",
+        label: "تشغيل هادئ",
         category: "benefit",
         scope: "product",
         reviewIds: ["review-1"],
         count: 1,
-        quotes: [{ reviewId: "review-1", quote: "Quiet operation" }],
+        quotes: [{ reviewId: "review-1", quote: "تشغيل هادئ" }],
       },
     ];
     const insight = {
       category: "benefit",
-      title: "Quiet",
-      description: "Quiet operation",
+      title: "هدوء",
+      description: "تشغيل هادئ",
       themeIds: ["theme-typo"],
     };
     const angle = {
-      name: "Quiet",
-      type: "benefit",
-      persona: "Hypothesis",
-      insight: "Quiet operation",
+      name: "هدوء",
+      type: "فائدة",
+      persona: "فرضية",
+      insight: "تشغيل هادئ",
       themeIds: ["theme-typo"],
-      hook: "Quiet operation",
+      hook: "تشغيل هادئ",
       alternativeHooks: [],
-      copy: "Quiet operation",
-      ugc: "Show the product",
-      firstThreeSeconds: "Product shot",
-      cta: "View details",
+      copy: "تشغيل هادئ",
+      ugc: "تصوير من فوق للمنتج",
+      firstThreeSeconds: "لقطة من فوق للمنتج",
+      cta: "شاهد التفاصيل",
     };
     mock.parse.mockResolvedValue({
       output_parsed:
@@ -81,7 +81,7 @@ it.each(["intelligence", "angles"] as const)(
           ? { insights: [insight] }
           : { angles: [angle] },
     });
-    await expect(new OpenAIProvider()[method](themes, "en")).rejects.toThrow();
+    await expect(new OpenAIProvider()[method](themes, "ar")).rejects.toThrow();
     const schema = mock.parse.mock.calls[0][0].text.format.schema;
     const collection = method === "intelligence" ? "insights" : "angles";
     const reference = schema.properties[collection].items.properties.themeIds;
@@ -94,7 +94,7 @@ it.each(["intelligence", "angles"] as const)(
         ? { insights: [{ ...insight, themeIds: ["theme-available"] }] }
         : { angles: [{ ...angle, themeIds: ["theme-available"] }] };
     mock.parse.mockResolvedValue({ output_parsed: valid });
-    await expect(new OpenAIProvider()[method](themes, "en")).resolves.toEqual(
+    await expect(new OpenAIProvider()[method](themes, "ar")).resolves.toEqual(
       valid,
     );
   },

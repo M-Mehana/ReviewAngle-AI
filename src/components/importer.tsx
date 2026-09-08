@@ -23,6 +23,7 @@ import {
   languageName,
   outputLanguages,
   type OutputLanguage,
+  defaultOutputLanguage,
 } from "@/lib/language";
 import type { Project } from "@/lib/analysis/schema";
 import { Spinner } from "./ui";
@@ -41,7 +42,9 @@ export function Importer({
 }) {
   const t = (en: string, arabic: string) => (ar ? arabic : en);
   const [name, setName] = useState("");
-  const [language, setLanguage] = useState<OutputLanguage>(ar ? "ar" : "en");
+  const [language, setLanguage] = useState<OutputLanguage>(
+    defaultOutputLanguage,
+  );
   const [tab, setTab] = useState("paste");
   const [text, setText] = useState("");
   const [url, setUrl] = useState("");

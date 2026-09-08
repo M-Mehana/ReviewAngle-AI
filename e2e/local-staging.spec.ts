@@ -45,7 +45,7 @@ function verifyEvidence(p: Project) {
   }
 }
 
-for (const language of ["en", "ar-EG"] as const) {
+for (const language of ["ar", "ar-EG"] as const) {
   test(`real OpenAI ${language}: arbitrary import, analysis, evidence and persistence`, async ({
     page,
     request,
@@ -53,6 +53,9 @@ for (const language of ["en", "ar-EG"] as const) {
     test.setTimeout(600_000);
     const consoleErrors: string[] = [];
     page.on("pageerror", () => consoleErrors.push("browser error"));
+    await page.addInitScript(() =>
+      localStorage.setItem("reviewangle-ui", "en"),
+    );
     await page.goto("/");
     await expect(page.getByRole("status")).toHaveText(
       "Local staging — real OpenAI, local data",
@@ -62,7 +65,7 @@ for (const language of ["en", "ar-EG"] as const) {
     ).toHaveCount(0);
     await page.getByLabel("Project name").fill(`Phase 2 live ${language}`);
     await page.getByLabel("Marketing output language").selectOption(language);
-    if (language === "en") {
+    if (language === "ar") {
       await page
         .getByLabel("One review per paragraph")
         .fill(reviews.join("\n\n"));
@@ -108,7 +111,7 @@ for (const language of ["en", "ar-EG"] as const) {
     ).toBe("complete");
     verifyEvidence(project);
     const copy = project.angles.map((a) => `${a.hook} ${a.copy}`).join(" ");
-    if (language === "en") expect(copy).not.toMatch(/[\u0600-\u06ff]/);
+    if (language === "ar") expect(copy).toMatch(/[\u0600-\u06ff]/);
     else {
       expect(copy).toMatch(/[\u0600-\u06ff]/);
       expect(copy).toMatch(/مش|عشان|بت|خليك|دلوقتي|من غير|معاك|ليك|يخليك/);
@@ -159,6 +162,7 @@ test("local staging accepts arbitrary TXT and rejects hostile request origins", 
   page,
   request,
 }) => {
+  await page.addInitScript(() => localStorage.setItem("reviewangle-ui", "en"));
   await page.goto("/");
   await page.getByRole("tab", { name: "Upload file" }).click();
   await page.locator("input[type=file]").setInputFiles({
@@ -174,7 +178,7 @@ test("local staging accepts arbitrary TXT and rejects hostile request origins", 
   const created = await request.post("/api/projects", {
     data: {
       name: "Phase 2 TXT persistence",
-      language: "en",
+      language: "ar",
       reviews: reviews.map((text) => ({ text, source: "staging.txt" })),
     },
   });

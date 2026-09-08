@@ -107,7 +107,7 @@ it.each([50, 200])(
     let p: Project = {
       id: crypto.randomUUID(),
       name: "NON-CUSTOMER volume validation",
-      language: "en",
+      language: "ar",
       demo: true,
       createdAt: now,
       updatedAt: now,

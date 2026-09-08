@@ -84,7 +84,7 @@ test("real Supabase password login, renewal, authenticated analysis, relational 
       headers: auth,
       data: {
         name: "NON-CUSTOMER Supabase validation",
-        language: "en",
+        language: "ar",
         reviews: [
           {
             text: "The travel mug keeps my tea warm during the commute. The lid has not leaked in my work bag.",
@@ -271,6 +271,9 @@ test("real Supabase password login, renewal, authenticated analysis, relational 
       },
       { storageKey, session },
     );
+    await page.addInitScript(() =>
+      localStorage.setItem("reviewangle-ui", "en"),
+    );
     await page.goto("/");
     await expect(
       page.getByText("Local staging — real OpenAI, local data", {
@@ -304,6 +307,7 @@ test("real Supabase password login, renewal, authenticated analysis, relational 
           quotaLease: true,
           localStagingMode: false,
           model: p.run.model,
+          telemetry: p.run.telemetry,
           durationMs: Date.now() - started,
           emailDeliveryAndPublicSignup: "separate manual gate",
         },

@@ -5,6 +5,7 @@ test("paste and CSV both complete analysis from synthetic review input", async (
   page,
 }) => {
   const rows = fixtures("en").slice(0, 6);
+  await page.addInitScript(() => localStorage.setItem("reviewangle-ui", "en"));
   await page.goto("/");
   await page.getByLabel("Project name").fill("Paste fixture verification");
   await page
@@ -23,13 +24,11 @@ test("paste and CSV both complete analysis from synthetic review input", async (
   const csv =
     "text,rating\n" +
     rows.map((r) => `"${r.text.replaceAll('"', '""')}",${r.rating}`).join("\n");
-  await page
-    .locator("input[type=file]")
-    .setInputFiles({
-      name: "synthetic.csv",
-      mimeType: "text/csv",
-      buffer: Buffer.from(csv),
-    });
+  await page.locator("input[type=file]").setInputFiles({
+    name: "synthetic.csv",
+    mimeType: "text/csv",
+    buffer: Buffer.from(csv),
+  });
   await expect(
     page.getByRole("combobox", { name: "Review text *", exact: true }),
   ).toHaveValue("text");
@@ -54,6 +53,7 @@ test("desktop: synthetic reviews → analysis → evidence → followups → sav
 }) => {
   const errors: string[] = [];
   page.on("pageerror", (e) => errors.push(e.message));
+  await page.addInitScript(() => localStorage.setItem("reviewangle-ui", "en"));
   await page.goto("/");
   await expect(page.locator(".demo-banner")).toContainText("SYNTHETIC DEMO");
   await page.getByRole("button", { name: "Mixed", exact: true }).click();
@@ -64,7 +64,9 @@ test("desktop: synthetic reviews → analysis → evidence → followups → sav
   await expect(
     page.getByRole("heading", { name: "Overview", exact: true }),
   ).toBeVisible({ timeout: 90000 });
-  await expect(page.getByText("of 12 imported")).toBeVisible({ timeout: 90000 });
+  await expect(page.getByText("of 12 imported")).toBeVisible({
+    timeout: 90000,
+  });
   await page.screenshot({
     path: "test-results/desktop-overview.png",
     fullPage: true,
@@ -82,6 +84,7 @@ test("desktop: synthetic reviews → analysis → evidence → followups → sav
     .first()
     .click();
   const dialog = page.getByRole("dialog");
+  await expect(dialog).toHaveAttribute("dir", "rtl");
   await expect(
     dialog.getByRole("heading", { name: "The evidence behind the insight" }),
   ).toBeVisible();
@@ -100,6 +103,7 @@ test("desktop: synthetic reviews → analysis → evidence → followups → sav
     .getByRole("button", { name: "View Angle", exact: true })
     .first()
     .click();
+  await expect(page.getByRole("dialog")).toHaveAttribute("dir", "rtl");
   await page.getByRole("button", { name: "Generate More Hooks" }).click();
   await expect(
     page.getByRole("heading", { name: "Additional hooks" }),
@@ -137,10 +141,6 @@ test("mobile Arabic: RTL import and complete localized results without horizonta
 }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/");
-  await page
-    .getByRole("button", { name: "العربية", exact: true })
-    .first()
-    .click();
   await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
   await page.getByRole("button", { name: "العربية", exact: true }).click();
   await page.getByLabel("لغة المحتوى التسويقي").selectOption("ar-EG");
@@ -186,6 +186,7 @@ test("mobile Arabic: RTL import and complete localized results without horizonta
   await page.getByRole("button", { name: "إغلاق", exact: true }).click();
 });
 test("CSV column mapping and malformed file recovery", async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem("reviewangle-ui", "en"));
   await page.goto("/");
   await page.getByRole("tab", { name: "Upload file" }).click();
   await page.locator("input[type=file]").setInputFiles({
@@ -217,4 +218,58 @@ test("CSV column mapping and malformed file recovery", async ({ page }) => {
   await expect(page.locator(".error-banner")).toContainText(
     "synthetic fixtures only",
   );
+});
+
+test("Arabic-first defaults, output options and legacy project remain readable", async ({
+  page,
+  request,
+}) => {
+  const now = new Date().toISOString();
+  const legacy = {
+    id: "legacy",
+    name: "Historical English",
+    language: "en",
+    demo: true,
+    createdAt: now,
+    updatedAt: now,
+    reviews: [],
+    extractions: [],
+    themes: [],
+    insights: [],
+    angles: [],
+    followups: [],
+    run: {
+      id: "old",
+      stage: "complete",
+      processed: 0,
+      failedReviewIds: [],
+      model: "historical",
+      scoreVersion: "v1",
+    },
+  };
+  await page.route("**/api/projects", (route) =>
+    route.fulfill({ json: { projects: [legacy] } }),
+  );
+  await page.goto("/");
+  await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
+  const selector = page.getByLabel("لغة المحتوى التسويقي");
+  await expect(selector).toHaveValue("ar");
+  expect(
+    await selector
+      .locator("option")
+      .evaluateAll((options) =>
+        options.map((o) => (o as HTMLOptionElement).value),
+      ),
+  ).toEqual(["ar", "ar-EG", "ar-SA"]);
+  const rejected = await request.post("/api/projects", {
+    data: {
+      name: "Unsupported output",
+      language: "en",
+      reviews: fixtures("en"),
+    },
+  });
+  expect(rejected.ok()).toBe(false);
+  await page.getByRole("button", { name: /كل المشاريع/ }).click();
+  await page.getByRole("button", { name: /Historical English/ }).click();
+  await expect(page.getByRole("status")).toContainText("نتائج إنجليزية قديمة");
 });

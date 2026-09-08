@@ -10,7 +10,7 @@ export function project(): Project {
   return {
     id: crypto.randomUUID(),
     name: "Synthetic test",
-    language: "en",
+    language: "ar",
     demo: true,
     createdAt: now,
     updatedAt: now,

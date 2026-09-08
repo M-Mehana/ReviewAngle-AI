@@ -16,7 +16,7 @@ import type { Angle, Project, Theme } from "@/lib/analysis/schema";
 import { api, copy } from "@/lib/client";
 import { Modal, Empty, Spinner } from "./ui";
 import { repeatedPhrases } from "@/lib/analysis/voc";
-import { localizeError } from "@/lib/language";
+import { localizeError, direction } from "@/lib/language";
 export const sections = [
   "overview",
   "themes",
@@ -83,6 +83,15 @@ export function Results({
     }
   }
   async function mutate(action: string, angleId?: string, reviewId?: string) {
+    if (p.language === "en" && action !== "save") {
+      setLocalError(
+        t(
+          "Legacy English output is read-only.",
+          "النتائج الإنجليزية القديمة للعرض فقط.",
+        ),
+      );
+      return;
+    }
     setLocalError("");
     setBusy(`${action}:${angleId || reviewId}`);
     try {
@@ -147,7 +156,15 @@ export function Results({
     strong: t("Strong evidence", "أدلة قوية"),
   };
   return (
-    <>
+    <div dir={direction(p.language)}>
+      {p.language === "en" && (
+        <p role="status">
+          {t(
+            "Legacy English output — viewing and export only.",
+            "نتائج إنجليزية قديمة — للعرض والتصدير فقط.",
+          )}
+        </p>
+      )}
       {!!p.run.rejectedFacts && (
         <div className="notice warning">
           {t(
@@ -617,6 +634,7 @@ export function Results({
         onClose={() => setAngle(null)}
         title={angle?.name || ""}
         ar={ar}
+        dir={direction(p.language)}
         description={t(
           "Generated marketing concept grounded in customer evidence.",
           "فكرة تسويقية مولّدة ومستندة إلى أدلة العملاء.",
@@ -750,6 +768,7 @@ export function Results({
         title={t("The evidence behind the insight", "الأدلة وراء النتيجة")}
         description={evidence?.title}
         ar={ar}
+        dir={direction(p.language)}
       >
         <div className="evidence-reviews">
           {localError && (
@@ -810,6 +829,6 @@ export function Results({
             ))}
         </div>
       </Modal>
-    </>
+    </div>
   );
 }

@@ -1,6 +1,6 @@
 import { z } from "zod";
 import type { Review } from "../ingestion";
-import type { OutputLanguage } from "../language";
+import type { StoredOutputLanguage as OutputLanguage } from "../language";
 export const categories = [
   "attribute",
   "pain",
@@ -143,5 +143,9 @@ export type Project = {
     scoreVersion: string;
     themeCursor?: number;
     themeGroups?: { label: string; factKeys: string[] }[];
+    telemetry?: {
+      usage: import("./provider").UsageEvent[];
+      selection: import("./selective-repair").SelectionEvent[];
+    };
   };
 };

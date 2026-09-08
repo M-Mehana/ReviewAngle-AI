@@ -95,7 +95,7 @@ it("persists arbitrary reviews separately and calls the real provider SDK bounda
   const c = await context(request());
   const p = await createProject(c, {
     name: "Arbitrary local reviews",
-    language: "en",
+    language: "ar",
     reviews: [
       {
         text: "The ceramic mug keeps my morning tea warm through the commute.",
@@ -140,7 +140,7 @@ it("persists arbitrary reviews separately and calls the real provider SDK bounda
   await expect(
     createProject(demo, {
       name: "Demo",
-      language: "en",
+      language: "ar",
       reviews: [
         {
           text: "A completely arbitrary review cannot use the fixture provider.",

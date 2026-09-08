@@ -4,9 +4,9 @@ import { AppError, limit, type Context } from "./context";
 import { getProject, locked, reserve, saveProject } from "./store";
 import { prepareReviews } from "../ingestion";
 import { isFixture } from "../fixtures";
-import { outputLanguages } from "../language";
+import { outputLanguages, requireCurrentOutput } from "../language";
 import { advance } from "../analysis/pipeline";
-import { OpenAIProvider } from "../analysis/provider";
+import { modelForStage, OpenAIProvider } from "../analysis/provider";
 import { demoProvider } from "../analysis/demo-provider";
 import { FollowupSchema, type Project } from "../analysis/schema";
 export const ImportSchema = z.object({
@@ -65,7 +65,9 @@ export async function createProject(c: Context, input: unknown) {
       failedReviewIds: [],
       model: c.demo
         ? "synthetic-fixture-rules-v1"
-        : process.env.OPENAI_MODEL || "gpt-6-astra",
+        : [...new Set([modelForStage("FAST"), modelForStage("QUALITY")])].join(
+            " / ",
+          ),
       scoreVersion: "v1",
     },
   };
@@ -76,6 +78,7 @@ export async function step(c: Context, id: string) {
   return locked(c, id, async () => {
     const p = await getProject(c, id);
     if (p.run.stage === "complete") return p;
+    requireCurrentOutput(p.language);
     await reserve(c, p.run.id, "reviews", p.reviews.length);
     const next = await advance(p, c.demo ? demoProvider : new OpenAIProvider());
     await saveProject(c, next);
@@ -93,6 +96,7 @@ export async function action(c: Context, id: string, input: unknown) {
   const data = ActionSchema.parse(input);
   return locked(c, id, async () => {
     const p = await getProject(c, id);
+    if (data.action !== "save") requireCurrentOutput(p.language);
     const provider = c.demo ? demoProvider : new OpenAIProvider();
     if (data.action === "translate") {
       if (c.demo)
@@ -130,6 +134,7 @@ export async function action(c: Context, id: string, input: unknown) {
           p.reviews.filter((r) => angle.reviewIds.includes(r.id)),
           data.action,
           p.language,
+          p.themes.filter((t) => angle.themeIds.includes(t.id)),
         ),
       );
       if (
@@ -148,6 +153,13 @@ export async function action(c: Context, id: string, input: unknown) {
         reviewIds: [...new Set(result.reviewIds)],
         createdAt: new Date().toISOString(),
       });
+      if (provider.telemetry) {
+        const previous = p.run.telemetry || { usage: [], selection: [] };
+        p.run.telemetry = {
+          usage: [...previous.usage, ...provider.telemetry.usage],
+          selection: [...previous.selection, ...provider.telemetry.selection],
+        };
+      }
     }
     p.updatedAt = new Date().toISOString();
     await saveProject(c, p);

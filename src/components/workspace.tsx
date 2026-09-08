@@ -33,7 +33,7 @@ export function Workspace({
   localStaging?: boolean;
 }) {
   const supabase = localStaging ? null : getSupabase();
-  const [ar, setAr] = useState(false);
+  const [ar, setAr] = useState(true);
   const t = (en: string, arabic: string) => (ar ? arabic : en);
   const [signed, setSigned] = useState(demo || localStaging);
   const [authReady, setAuthReady] = useState(demo || localStaging || !ready);
@@ -52,7 +52,7 @@ export function Workspace({
   const [help, setHelp] = useState(false);
   useEffect(() => {
     const lang = localStorage.getItem("reviewangle-ui");
-    if (lang === "ar") setAr(true);
+    if (lang === "en") setAr(false);
   }, []);
   useEffect(() => {
     document.documentElement.dir = ar ? "rtl" : "ltr";
@@ -639,7 +639,7 @@ export function Workspace({
                         "يُحفظ التقدم بعد كل خطوة. إذا غادرت، افتح المشروع وأكمل التحليل.",
                       )}
                     </p>
-                    {!busy && (
+                    {!busy && project.language !== "en" && (
                       <button
                         className="button primary"
                         onClick={() => void run(project)}

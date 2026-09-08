@@ -1,3 +1,4 @@
+import { requireCurrentOutput } from "../language";
 import {
   AnglesSchema,
   ExtractionSchema,
@@ -17,6 +18,7 @@ export async function advance(
   project: Project,
   provider: ModelProvider,
 ): Promise<Project> {
+  requireCurrentOutput(project.language);
   const p = structuredClone(project);
   p.run.error = undefined;
   if (p.run.stage === "failed") p.run.stage = p.run.resumeStage || "extracting";
@@ -130,5 +132,15 @@ export async function advance(
         : "The AI service could not complete this step. Check your API configuration or rate limit, then retry.";
   }
   p.updatedAt = new Date().toISOString();
+  if (provider.telemetry) {
+    const previous = p.run.telemetry || { usage: [], selection: [] };
+    p.run.telemetry = {
+      usage: [...previous.usage, ...provider.telemetry.usage.splice(0)],
+      selection: [
+        ...previous.selection,
+        ...provider.telemetry.selection.splice(0),
+      ],
+    };
+  }
   return p;
 }

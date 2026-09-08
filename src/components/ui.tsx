@@ -9,6 +9,7 @@ export function Modal({
   description,
   children,
   ar = false,
+  dir,
 }: {
   open: boolean;
   onClose: () => void;
@@ -16,6 +17,7 @@ export function Modal({
   description?: string;
   children: ReactNode;
   ar?: boolean;
+  dir?: "rtl" | "ltr";
 }) {
   return (
     <Dialog.Root
@@ -26,7 +28,7 @@ export function Modal({
     >
       <Dialog.Portal>
         <Dialog.Overlay className="modal-overlay" />
-        <Dialog.Content className="modal" dir={ar ? "rtl" : "ltr"}>
+        <Dialog.Content className="modal" dir={dir ?? (ar ? "rtl" : "ltr")}>
           <div className="modal-head">
             <div>
               <Dialog.Title>{title}</Dialog.Title>

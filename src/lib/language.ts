@@ -1,5 +1,15 @@
-export const outputLanguages = ["en", "ar", "ar-EG", "ar-SA"] as const;
+export const outputLanguages = ["ar", "ar-EG", "ar-SA"] as const;
 export type OutputLanguage = (typeof outputLanguages)[number];
+export type StoredOutputLanguage = OutputLanguage | "en";
+export const defaultOutputLanguage: OutputLanguage = "ar";
+export function requireCurrentOutput(
+  language: StoredOutputLanguage,
+): asserts language is OutputLanguage {
+  if (!outputLanguages.includes(language as OutputLanguage))
+    throw new Error(
+      "English output is legacy and read-only. Create a new Arabic analysis.",
+    );
+}
 export function direction(language: string): "rtl" | "ltr" {
   return language.startsWith("ar") ? "rtl" : "ltr";
 }
@@ -10,13 +20,14 @@ export function detectLanguage(text: string): string {
     return "mixed";
   return ar > en ? "ar" : en > 0 ? "en" : "und";
 }
-export const languageName: Record<OutputLanguage, string> = {
-  en: "English",
+export const languageName: Record<StoredOutputLanguage, string> = {
+  en: "English (legacy)",
   ar: "العربية الفصحى",
   "ar-EG": "العربية المصرية",
   "ar-SA": "العربية الخليجية / السعودية",
 };
-export function localizationPrompt(lang: OutputLanguage) {
+export function localizationPrompt(lang: StoredOutputLanguage) {
+  requireCurrentOutput(lang);
   return {
     en: "Write natural English.",
     ar: "اكتب بالعربية الفصحى الواضحة بأسلوب تسويقي طبيعي.",
